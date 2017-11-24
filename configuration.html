@@ -22,6 +22,7 @@
                     var $decimalPlacesDropdown = $("#decimal-places-dropdown");
                     var $checkOptionBuildName = $("#check-option-build-name");
                     var $checkOptionMeasurementName = $("#check-option-measurement-name");
+                    var $checkOptionTrendsChart = $("#check-option-trends-chart");
 
                     return {
                         load: function (widgetSettings, widgetConfigurationContext) {
@@ -94,6 +95,16 @@
                                 $checkOptionMeasurementName.prop('checked', false);
                             }
 
+                            // If show measurement trends has been previously selected, set the checkbox value
+                            if (settings && settings.checkOptionTrendsChart == true) {
+                                $checkOptionTrendsChart.prop('checked', true);
+                            }
+                            // Otherwise, mark the box as unchecked
+                            else {
+                                $checkOptionTrendsChart.prop('checked', false);
+                            }
+
+
                             // If a build definition change has been made, prepare to persist the new values
                             $buildDefinitionDropdown.on("change", function () {
                                 // Output diagnostics info to console
@@ -105,7 +116,8 @@
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
-                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked')
+                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                        checkOptionTrendsChart : $checkOptionTrendsChart.prop('checked')
                                     })
                                 };
                                 var eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
@@ -124,7 +136,8 @@
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
-                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked')
+                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                        checkOptionTrendsChart : $checkOptionTrendsChart.prop('checked')
                                     })
                                 };
                                 var eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
@@ -143,7 +156,8 @@
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
-                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked')
+                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                        checkOptionTrendsChart : $checkOptionTrendsChart.prop('checked')
                                     })
                                 };
                                 var eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
@@ -162,7 +176,8 @@
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
-                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked')
+                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                        checkOptionTrendsChart : $checkOptionTrendsChart.prop('checked')
 
                                     })
                                 };
@@ -182,8 +197,37 @@
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
-                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked')
+                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                        checkOptionTrendsChart : $checkOptionTrendsChart.prop('checked')
+                                    })
+                                };
+                                var eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
+                                var eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
+                                widgetConfigurationContext.notify(eventName, eventArgs);
+                            });
 
+                            // If a show measurement trends change has been made, prepare to persist the new values
+                            $checkOptionTrendsChart.on("change", function () {
+                                if ($checkOptionTrendsChart.prop('checked')) {
+                                    $checkOptionBuildName.hide();
+                                    $("#check-option-name").hide();
+                                }
+                                else {
+                                    $checkOptionBuildName.show();
+                                    $("#check-option-name").show();
+                                }
+                                
+                                // Output diagnostics info to console
+                                console.log('event: checkOptionTrendsChart.change');
+
+                                var customSettings = {
+                                    data: JSON.stringify({
+                                        buildDefinition: $buildDefinitionDropdown.val(),
+                                        coverageMeasurement: $coverageMeasurementDropdown.val(),
+                                        decimalPlaces: $decimalPlacesDropdown.val(),
+                                        checkOptionBuildName: $checkOptionBuildName.prop('checked'),
+                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                        checkOptionTrendsChart : $checkOptionTrendsChart.prop('checked')
                                     })
                                 };
                                 var eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
@@ -204,8 +248,8 @@
                                     coverageMeasurement: $coverageMeasurementDropdown.val(),
                                     decimalPlaces: $decimalPlacesDropdown.val(),
                                     checkOptionBuildName: $checkOptionBuildName.prop('checked'),
-                                    checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked')
-
+                                    checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                    checkOptionTrendsChart : $checkOptionTrendsChart.prop('checked')
                                 })
                             };
                             return WidgetHelpers.WidgetConfigurationSave.Valid(customSettings);
@@ -257,9 +301,11 @@
                 <fieldset class="checkbox">
                     <legend>Additional options</legend>
                     <input type="checkbox" id="check-option-build-name" name="check-option-build-name">
-                    <label for="check-option-build-name">Show the name of the build</label><br/>
+                    <label id="check-option-name" name="check-option-name" for="check-option-build-name">Show the name of the build</label><br/>
                     <input type="checkbox" id="check-option-measurement-name" name="check-option-measurement-name">
                     <label for="check-option-measurement-name">Show the name of the coverage measurement</label><br />
+                    <input type="checkbox" id="check-option-trends-chart" name="check-option-trends-chart">
+                    <label for="check-option-trends-chart">Show the coverage measurement as a trends chart</label><br />
                 </fieldset>
             </div>
         </div>

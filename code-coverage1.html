@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link href="scripts/c3.min.css" rel="stylesheet" type="text/css" />
         <script src="lib/VSS.SDK.min.js"></script>
+        <script src="scripts/d3.min.js" charset="utf-8"></script>
+        <script src="scripts/c3.min.js"></script>    
         <script type="text/javascript">
             // Initialize
             VSS.init({
@@ -17,6 +20,10 @@
                 VSS.register("CodeCoverageWidget1", function () {
                     var projectId = VSS.getWebContext().project.id;
                     var getBuildBuildInfo = function (widgetSettings) {
+
+                        $("#chart-title").hide();
+                        $("#chart").hide();
+
                         var settings = JSON.parse(widgetSettings.customSettings.data);
                         if (!settings || !settings.buildDefinition) {                      
                             // Initialize display values
@@ -153,6 +160,153 @@
                             });
                     }
 
+                    var getTrendsChartInfo = function (widgetSettings) {
+
+                        $("#build-name").hide();
+                        $("#build-link").hide();
+                        $("div.big-count").hide();
+                        $("#percent-label").hide();
+                        $("#init-label").hide();
+
+                        var settings = JSON.parse(widgetSettings.customSettings.data);
+                        if (!settings || !settings.buildDefinition) {                      
+                            // Initialize display values
+                            $("#init-label").show();
+                            $("div.big-count").hide();
+                            $("#percent-label").hide();
+                            
+                            return WidgetHelpers.WidgetStatusHelper.Success()
+                        }
+
+                        if (settings && settings.checkOptionBuildName == true) {
+                            // Show build name
+                            $("#build-name").show();
+                        }
+                        else {
+                            // Hide build name
+                            $("#build-name").hide();
+                        }
+                        
+                        // Output diagnostics info to console
+                        console.log('projectId = ' + projectId);
+                        console.log('settings.buildDefinition = ' + settings.buildDefinition);
+
+                        // Get most recent successful build details
+                        // .getBuilds(project, definitions, queues, buildNumber, minFinishTime, maxFinishTime, requestedFor, reasonFilter, statusFilter, resultFilter, tagFilters, properties, type, top, continuationToken, maxBuildsPerDefinition, deletedFilter, queryOrder, branchName)
+                        var promiseArray = [];
+                        TFS_Build_WebApi.getClient().getBuilds(projectId, [parseInt(settings.buildDefinition)], null, null, null, null, null, null, "Completed", "Failed,PartiallySucceeded,Succeeded", null, null, null, 1, null, null, null, null, null)
+                            .then(function (query2) {
+
+                                 // Get last 10 builds and ask for coverage
+                                var nbBuilds = 10;
+                                var buildIdArray = [];
+                                for (var i = 0 ; i <= query2.length - 1 ; i++) {
+                                    buildIdArray.push(query2[i].id);
+                                }
+                                buildIdArray.sort().reverse().slice(0, nbBuilds).forEach(function(buildId) {
+                                    promiseArray.push(TFS_TestMgmt_WebApi.getClient().getCodeCoverageSummary(projectId, buildId));
+                                });
+
+                                // get coverage for all builds
+                                var nbCoverage = 0;
+                                Promise.all(promiseArray).then(function (arrayOfQuery) {
+                                    var coverageValues = [];
+                                    for (var i = 0 ; i < arrayOfQuery.length ; i++) {
+                                        // Evaluate for where there is no coverage data                                        
+                                        var coveragePct = 0;
+                                        if (arrayOfQuery[i].coverageData[0]) {
+                                            // Filter for selected coverage measurement
+                                            var coverageMeasurement = "";
+                                            if (!settings || !settings.coverageMeasurement) {
+                                                // Default to Lines if not previously chosen
+                                                coverageMeasurement = "Lines";
+                                            }
+                                            else {
+                                                coverageMeasurement = settings.coverageMeasurement;
+                                            }
+                                            
+                                            var coverageData = arrayOfQuery[i].coverageData[0].coverageStats.filter(function (el) {
+                                                return el.label == coverageMeasurement;
+                                            });
+                                            
+                                            // Iterate and count code coverage items
+                                            var totalMeasurement = 0;
+                                            var coveredMeasurement = 0;
+                                            var coveragePct = 0;
+                                            $.each(coverageData, function(key, value) {
+                                                totalMeasurement += value.total;
+                                                coveredMeasurement += value.covered;
+                                            });
+                                                                                
+                                            // Calculate code coverage percentage
+                                            // This check avoids divide by zero error
+                                            if (totalMeasurement > 0) {
+                                                coveragePct = ((coveredMeasurement / totalMeasurement) * 100);
+                                                // Determine and set the requested number of decimal places
+                                                if (!settings || !settings.decimalPlaces) {
+                                                    // Default to zero if not previously chosen
+                                                    coveragePct = coveragePct.toFixed(0);
+                                                }
+                                                else {
+                                                    coveragePct = coveragePct.toFixed(parseInt(settings.decimalPlaces));
+                                                }
+                                            }
+                
+                                            nbCoverage++;
+                                        }
+                                        var obj = new Object();
+                                        obj.buildId = arrayOfQuery[i].build.id;
+                                        obj.coveragePct = coveragePct;
+                                        coverageValues.push(obj);
+                                    }
+
+                                    // Update UI with code coverage percentage
+
+                                    if (settings && settings.checkOptionMeasurementName == true) {
+                                        // Add the measurement name to the percent label
+                                        $("#chart-title").text("Percent (" + coverageMeasurement + ")");
+                                    }
+                                    else {
+                                        // Use the default percent label
+                                        $("#chart-title").text("Percent");
+                                    }
+                                    $("#chart-title").show();
+                                    $("#chart").show();
+
+
+                                    if (nbCoverage == 0) {
+                                        console.log("No coverage");
+                                        $("#chart").text("No code coverage ... :(");
+                                        return WidgetHelpers.WidgetStatusHelper.Success();
+                                    }
+                
+                                    // now we have coverage values, draw the graph
+                                    coverageValues.sort(function(a, b) {
+                                        return parseInt(a.buildId) > parseInt(b.buildId);
+                                    });
+
+                                    var chartValuesX = ['x'];
+                                    var chartValuesY = ['Coverage'];
+                                    for (var i = 0 ; i < coverageValues.length ; i++) {
+                                        chartValuesX.push(coverageValues[i].buildId);
+                                        chartValuesY.push(coverageValues[i].coveragePct);
+                                    }
+
+                                    var chart = c3.generate({
+                                        bindto: '#chart',
+                                        data: {
+                                            x: 'x',
+                                            columns: [
+                                                chartValuesX,
+                                                chartValuesY
+                                            ]
+                                        }
+                                    });
+                                });
+                            });
+                        return WidgetHelpers.WidgetStatusHelper.Success();                   
+                    }
+
                     return {
                         load: function (widgetSettings) {
                             // Set title
@@ -161,7 +315,13 @@
                             // Output diagnostics info to console
                             console.log('event: load');
 
-                            return getBuildBuildInfo(widgetSettings);
+                            var settings = JSON.parse(widgetSettings.customSettings.data);
+                            if (settings && settings.checkOptionTrendsChart == true) {
+                                return getTrendsChartInfo(widgetSettings);
+                            }
+                            else {
+                                return getBuildBuildInfo(widgetSettings);
+                            }
                         },
                         reload: function (widgetSettings) {
                             // Set title
@@ -170,7 +330,13 @@
                             // Output diagnostics info to console
                             console.log('event: reload');
 
-                            return getBuildBuildInfo(widgetSettings);
+                            var settings = JSON.parse(widgetSettings.customSettings.data);
+                            if (settings && settings.checkOptionTrendsChart == true) {
+                                return getTrendsChartInfo(widgetSettings);
+                            }
+                            else {
+                                return getBuildBuildInfo(widgetSettings);
+                            }
                         }
                     }
                 });
@@ -187,6 +353,8 @@
             <a id="build-link" target="_blank">
                 <div id="build-name" class="subtitle"></div>
             </a>
+            <h2 id="chart-title"></h2>
+            <div id="chart"></div>
         </div>
     </body>
 </html>
