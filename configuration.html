@@ -18,6 +18,7 @@
 
                     var projectId = VSS.getWebContext().project.id;
                     var $buildDefinitionDropdown = $("#build-definition-dropdown");
+                    var $buildDefinitionBranchDropdown = $("#build-definition-branch-dropdown");
                     var $coverageMeasurementDropdown = $("#coverage-measurement-dropdown");
                     var $decimalPlacesDropdown = $("#decimal-places-dropdown");
                     var $checkOptionBuildName = $("#check-option-build-name");
@@ -50,6 +51,11 @@
                                     $('#build-definition-dropdown').prepend($('<option />').val('').text('Please select a build definition:'));
                                     $('#build-definition-dropdown').val('');
                                     $("#build-definition-dropdown option[value='']").attr("disabled", true);
+                                }
+								
+								// If a build branch has been previously selected, set the dropdown value
+                                if (settings && settings.buildBranchDefinition) {
+                                    $buildDefinitionBranchDropdown.val(settings.buildBranchDefinition).trigger("chosen:updated");
                                 }
 
                                 // If a coverage measurement has been previously selected, set the dropdown value
@@ -108,10 +114,36 @@
                             $buildDefinitionDropdown.on("change", function () {
                                 // Output diagnostics info to console
                                 console.log('event: buildDefinitionDropdown.change');
+								
+								$buildDefinitionBranchDropdown.empty();
 
                                 var customSettings = {
                                     data: JSON.stringify({
                                         buildDefinition: $buildDefinitionDropdown.val(),
+										buildDefinitionBranch: $buildDefinitionBranchDropdown.val(),
+                                        coverageMeasurement: $coverageMeasurementDropdown.val(),
+                                        decimalPlaces: $decimalPlacesDropdown.val(),
+                                        checkOptionBuildName: $checkOptionBuildName.prop('checked'),
+                                        checkOptionMeasurementName: $checkOptionMeasurementName.prop('checked'),
+                                        checkOptionDelta: $checkOptionDelta.prop('checked')
+                                    })
+                                };
+                                var eventName = WidgetHelpers.WidgetEvent.ConfigurationChange;
+                                var eventArgs = WidgetHelpers.WidgetEvent.Args(customSettings);
+                                widgetConfigurationContext.notify(eventName, eventArgs);
+								
+								TFS_Build_WebApi.getClient().getDefinitions(projectId).then(function (query) {
+                            });
+							
+							// If a build definition branch change has been made, prepare to persist the new values
+                            $buildDefinitionBranchDropdown.on("change", function () {
+                                // Output diagnostics info to console
+                                console.log('event: buildDefinitionBranchDropdown.change');
+
+                                var customSettings = {
+                                    data: JSON.stringify({
+                                        buildDefinition: $buildDefinitionDropdown.val(),
+										buildDefinitionBranch: $buildDefinitionBranchDropdown.val(),
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
@@ -132,6 +164,7 @@
                                 var customSettings = {
                                     data: JSON.stringify({
                                         buildDefinition: $buildDefinitionDropdown.val(),
+										buildDefinitionBranch: $buildDefinitionBranchDropdown.val(),
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
@@ -152,6 +185,7 @@
                                 var customSettings = {
                                     data: JSON.stringify({
                                         buildDefinition: $buildDefinitionDropdown.val(),
+										buildDefinitionBranch: $buildDefinitionBranchDropdown.val(),
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
@@ -172,6 +206,7 @@
                                 var customSettings = {
                                     data: JSON.stringify({
                                         buildDefinition: $buildDefinitionDropdown.val(),
+										buildDefinitionBranch: $buildDefinitionBranchDropdown.val(),
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
@@ -193,6 +228,7 @@
                                 var customSettings = {
                                     data: JSON.stringify({
                                         buildDefinition: $buildDefinitionDropdown.val(),
+										buildDefinitionBranch: $buildDefinitionBranchDropdown.val(),
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
@@ -213,6 +249,7 @@
                                 var customSettings = {
                                     data: JSON.stringify({
                                         buildDefinition: $buildDefinitionDropdown.val(),
+										buildDefinitionBranch: $buildDefinitionBranchDropdown.val(),
                                         coverageMeasurement: $coverageMeasurementDropdown.val(),
                                         decimalPlaces: $decimalPlacesDropdown.val(),
                                         checkOptionBuildName: $checkOptionBuildName.prop('checked'),
@@ -235,6 +272,7 @@
                             var customSettings = {
                                 data: JSON.stringify({
                                     buildDefinition: $buildDefinitionDropdown.val(),
+                                    buildBranchDefinition: $buildDefinitionBranchDropdown.val(),
                                     coverageMeasurement: $coverageMeasurementDropdown.val(),
                                     decimalPlaces: $decimalPlacesDropdown.val(),
                                     checkOptionBuildName: $checkOptionBuildName.prop('checked'),
@@ -258,6 +296,13 @@
                 <div class="wrapper">
                     <select id="build-definition-dropdown">                        
                         <!--<option value="Shared Queries/Feedback">Shared Queries/Feedback</option>-->
+                    </select>
+                </div>
+            </div>
+            <div class="dropdown">
+                <label>Branch name</label>
+                <div class="wrapper">
+                    <select id="build-definition-branch-dropdown">                        
                     </select>
                 </div>
             </div>

@@ -23,6 +23,7 @@
                             $("#init-label").show();
                             $("div.big-count").hide();
                             $("#percent-label").hide();
+							$("#branch-label").hide();
                             
                             return WidgetHelpers.WidgetStatusHelper.Success()
                         }
@@ -42,19 +43,27 @@
                         if (parseInt(settings.buildDefinition) > 0) {
                             // Get most recent successful build details
                             // .getBuilds(project, definitions, queues, buildNumber, minFinishTime, maxFinishTime, requestedFor, reasonFilter, statusFilter, resultFilter, tagFilters, properties, type, top, continuationToken, maxBuildsPerDefinition, deletedFilter, queryOrder, branchName)
-                            TFS_Build_WebApi.getClient().getBuilds(projectId, [parseInt(settings.buildDefinition)], null, null, null, null, null, null, "Completed", "Failed,PartiallySucceeded,Succeeded", null, null, null, 1, null, null, null, null, null)
+                            TFS_Build_WebApi.getClient().getBuilds(projectId, [parseInt(settings.buildDefinition)], null, null, null, null, null, null, "Completed", "Failed,PartiallySucceeded,Succeeded", null, null, null, 1, null, null, null, null, settings.buildBranchDefinition)
                                 .then(function (query2) {
                                     // Evaluate build details of first result  
                                     if (query2[0]) {
                                         var buildId = query2[0].id; 
                                         var buildName = query2[0].buildNumber;
                                         var buildWeb = query2[0]._links.web.href
+										var buildBranchName = query2[0].sourceBranch;
 
+										//choose deltaBuildId
+										var deltaBuildId = null;
+										if(query2.length > 1)
+										{
+											d = query2[1].id;
+										}
+			
                                         // Output diagnostics info to console
                                         console.log('buildId: ' + buildId);
 
                                         // Get code coverage summary for most recent build
-                                        TFS_TestMgmt_WebApi.getClient().getCodeCoverageSummary(projectId, buildId)
+                                        TFS_TestMgmt_WebApi.getClient().getCodeCoverageSummary(projectId, buildId, deltaBuildId)
                                             .then(function (query3) {
                                                 // Evaluate for where there is no coverage data                                        
                                                 if (query3.coverageData[0]) {
@@ -128,6 +137,8 @@
                                                     $("#percent-label").show();
                                                     $("#init-label").hide();
                                                     $("#build-name").text(buildName);
+													$("#branch-label").text(buildBranchName);
+													$("#branch-label").show();
                                                     $("#build-link").prop("href", buildWeb);  
                                                     $("#build-link").prop("target", "_top");                                             
                                                 }
@@ -137,6 +148,7 @@
                                                     // Set display values for no coverage data
                                                     $("div.big-count").hide();
                                                     $("#percent-label").hide();
+													$("#branch-label").hide();
                                                     $("#init-label").text("No code coverage details found for this build definition");
                                                     $("#init-label").show();
                                                     $("#build-name").text("");
@@ -201,6 +213,7 @@
             <a id="build-link" target="_blank">
                 <div id="build-name" class="subtitle"></div>
             </a>
+			<label id="branch-label" hidden>Branch</label>
         </div>
     </body>
 </html>
